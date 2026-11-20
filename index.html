@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NATOフォネティックアルファベットフラッシュカード</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-800 to-slate-600 min-h-screen p-4">
+<div class="max-w-lg mx-auto">
+  <h1 class="text-2xl font-bold text-white text-center mb-1 mt-4">NATO フォネティック フラッシュカード</h1>
+  <p class="text-sm text-center text-slate-300 mb-5">Alpha / Bravo / Charlie … 26文字完全習得</p>
+
+  <!-- Mode selector -->
+  <div class="bg-slate-700 rounded-2xl p-3 mb-4 flex gap-2">
+    <button id="mode-forward" onclick="setMode('forward')"
+      class="flex-1 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-800">
+      A → Alpha（正方向）
+    </button>
+    <button id="mode-reverse" onclick="setMode('reverse')"
+      class="flex-1 py-2 rounded-xl text-sm font-semibold transition bg-slate-600 text-slate-300">
+      Alpha → A（逆方向）
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="bg-slate-700 rounded-2xl p-3 mb-4 grid grid-cols-4 text-center text-white text-sm">
+    <div>
+      <div class="font-bold text-xl text-green-400" id="n-correct">0</div>
+      <div class="text-slate-400 text-xs">正解</div>
+    </div>
+    <div>
+      <div class="font-bold text-xl text-red-400" id="n-wrong">0</div>
+      <div class="text-slate-400 text-xs">不正解</div>
+    </div>
+    <div>
+      <div class="font-bold text-xl text-yellow-300" id="n-pct">-</div>
+      <div class="text-slate-400 text-xs">正解率</div>
+    </div>
+    <div>
+      <div class="font-bold text-xl text-orange-300" id="n-streak">0</div>
+      <div class="text-slate-400 text-xs">streak</div>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div id="n-card" class="bg-white rounded-3xl shadow-2xl p-8 mb-4 text-center min-h-48 cursor-pointer"
+    onclick="nReveal()">
+    <div id="n-prompt" class="text-7xl font-bold text-slate-800 mb-2"></div>
+    <div id="n-answer" class="text-3xl font-semibold text-blue-700 mt-4 hidden"></div>
+    <div id="n-phonetics-extra" class="text-sm text-slate-400 mt-2 hidden"></div>
+    <div id="n-hint-text" class="text-xs text-slate-400 mt-4">クリックして答えを表示</div>
+  </div>
+
+  <div class="flex gap-3 mb-4">
+    <button id="n-btn-wrong" onclick="nAnswer(false)" disabled
+      class="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-30 text-white font-semibold py-3 rounded-xl transition">
+      ✗ 不正解
+    </button>
+    <button id="n-btn-correct" onclick="nAnswer(true)" disabled
+      class="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-30 text-white font-semibold py-3 rounded-xl transition">
+      ✓ 正解
+    </button>
+  </div>
+
+  <div class="flex gap-2 justify-center mb-4">
+    <button onclick="nReset()" class="text-sm text-slate-300 hover:text-white underline">リセット</button>
+    <span class="text-slate-500">|</span>
+    <button onclick="nShuffle()" class="text-sm text-slate-300 hover:text-white underline">シャッフル</button>
+  </div>
+
+  <!-- Progress grid -->
+  <div id="n-grid" class="bg-slate-700 rounded-2xl p-4 mb-4">
+    <div class="text-xs text-slate-400 mb-2">進捗</div>
+    <div id="n-grid-cells" class="grid grid-cols-7 gap-1"></div>
+  </div>
+
+  <!-- Reference table -->
+  <div class="bg-slate-700 rounded-2xl p-4 mb-4">
+    <div class="text-sm font-semibold text-slate-300 mb-3">参照テーブル</div>
+    <div id="ref-table" class="grid grid-cols-2 gap-1 text-xs text-slate-300"></div>
+  </div>
+</div>
+
+<script>
+const NATO = [
+  { letter: 'A', word: 'Alpha', pron: 'AL-fah' },
+  { letter: 'B', word: 'Bravo', pron: 'BRAH-voh' },
+  { letter: 'C', word: 'Charlie', pron: 'CHAR-lee' },
+  { letter: 'D', word: 'Delta', pron: 'DELL-tah' },
+  { letter: 'E', word: 'Echo', pron: 'EKK-oh' },
+  { letter: 'F', word: 'Foxtrot', pron: 'FOKS-trot' },
+  { letter: 'G', word: 'Golf', pron: 'GOLF' },
+  { letter: 'H', word: 'Hotel', pron: 'hoh-TELL' },
+  { letter: 'I', word: 'India', pron: 'IN-dee-ah' },
+  { letter: 'J', word: 'Juliet', pron: 'JEW-lee-ett' },
+  { letter: 'K', word: 'Kilo', pron: 'KEY-loh' },
+  { letter: 'L', word: 'Lima', pron: 'LEE-mah' },
+  { letter: 'M', word: 'Mike', pron: 'MIKE' },
+  { letter: 'N', word: 'November', pron: 'no-VEM-ber' },
+  { letter: 'O', word: 'Oscar', pron: 'OSS-cah' },
+  { letter: 'P', word: 'Papa', pron: 'pah-PAH' },
+  { letter: 'Q', word: 'Quebec', pron: 'keh-BECK' },
+  { letter: 'R', word: 'Romeo', pron: 'ROW-me-oh' },
+  { letter: 'S', word: 'Sierra', pron: 'see-AIR-rah' },
+  { letter: 'T', word: 'Tango', pron: 'TANG-go' },
+  { letter: 'U', word: 'Uniform', pron: 'YOU-nee-form' },
+  { letter: 'V', word: 'Victor', pron: 'VIK-tah' },
+  { letter: 'W', word: 'Whiskey', pron: 'WISS-key' },
+  { letter: 'X', word: 'X-ray', pron: 'ECKS-ray' },
+  { letter: 'Y', word: 'Yankee', pron: 'YANG-key' },
+  { letter: 'Z', word: 'Zulu', pron: 'ZOO-loo' },
+];
+
+const STORAGE_KEY9 = 'nato_flashcard';
+let nDeck = [...NATO];
+let nIdx = 0;
+let nRevealed = false;
+let nMode = 'forward'; // forward: A→Alpha, reverse: Alpha→A
+let nStats = { correct: 0, wrong: 0, streak: 0, results: {} };
+
+function nLoadStats() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY9) || '{}');
+    if (s.results) { nStats = s; nMode = s.mode || 'forward'; }
+  } catch {}
+}
+function nSaveStats() {
+  nStats.mode = nMode;
+  localStorage.setItem(STORAGE_KEY9, JSON.stringify(nStats));
+}
+
+function setMode(m) {
+  nMode = m;
+  document.getElementById('mode-forward').className =
+    m === 'forward'
+      ? 'flex-1 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-800'
+      : 'flex-1 py-2 rounded-xl text-sm font-semibold transition bg-slate-600 text-slate-300';
+  document.getElementById('mode-reverse').className =
+    m === 'reverse'
+      ? 'flex-1 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-800'
+      : 'flex-1 py-2 rounded-xl text-sm font-semibold transition bg-slate-600 text-slate-300';
+  nReset();
+}
+
+function nShowCard() {
+  if (nIdx >= nDeck.length) {
+    document.getElementById('n-card').innerHTML = `
+      <div class="py-6">
+        <div class="text-5xl mb-3">🎖️</div>
+        <div class="text-xl font-bold text-slate-800 mb-2">完了！</div>
+        <div class="text-slate-500">正解率: ${nStats.correct + nStats.wrong > 0 ? Math.round(nStats.correct / (nStats.correct + nStats.wrong) * 100) : 0}%</div>
+      </div>`;
+    return;
+  }
+  nRevealed = false;
+  const card = nDeck[nIdx];
+
+  const prompt = document.getElementById('n-prompt');
+  const answer = document.getElementById('n-answer');
+  const extra = document.getElementById('n-phonetics-extra');
+
+  if (nMode === 'forward') {
+    prompt.textContent = card.letter;
+    answer.textContent = card.word;
+    extra.textContent = `発音: ${card.pron}`;
+  } else {
+    prompt.textContent = card.word;
+    answer.textContent = card.letter;
+    extra.textContent = `発音: ${card.pron}`;
+  }
+
+  answer.classList.add('hidden');
+  extra.classList.add('hidden');
+  document.getElementById('n-hint-text').classList.remove('hidden');
+  document.getElementById('n-btn-wrong').disabled = true;
+  document.getElementById('n-btn-correct').disabled = true;
+  nUpdateStats();
+  nBuildGrid();
+}
+
+function nReveal() {
+  if (nIdx >= nDeck.length || nRevealed) return;
+  nRevealed = true;
+  document.getElementById('n-answer').classList.remove('hidden');
+  document.getElementById('n-phonetics-extra').classList.remove('hidden');
+  document.getElementById('n-hint-text').classList.add('hidden');
+  document.getElementById('n-btn-wrong').disabled = false;
+  document.getElementById('n-btn-correct').disabled = false;
+}
+
+function nAnswer(correct) {
+  if (!nRevealed) return;
+  const card = nDeck[nIdx];
+  if (correct) {
+    nStats.correct++;
+    nStats.streak++;
+  } else {
+    nStats.wrong++;
+    nStats.streak = 0;
+  }
+  nStats.results[card.letter] = correct ? 'correct' : 'wrong';
+  nSaveStats();
+  nIdx++;
+  nShowCard();
+}
+
+function nUpdateStats() {
+  const total = nStats.correct + nStats.wrong;
+  document.getElementById('n-correct').textContent = nStats.correct;
+  document.getElementById('n-wrong').textContent = nStats.wrong;
+  document.getElementById('n-pct').textContent = total > 0 ? `${Math.round(nStats.correct / total * 100)}%` : '-';
+  document.getElementById('n-streak').textContent = nStats.streak;
+}
+
+function nBuildGrid() {
+  const c = document.getElementById('n-grid-cells');
+  c.innerHTML = '';
+  nDeck.forEach((card, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'rounded text-xs text-center py-1 ';
+    if (i < nIdx) {
+      const res = nStats.results[card.letter];
+      cell.className += res === 'correct' ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+    } else if (i === nIdx) {
+      cell.className += 'bg-white text-slate-800 ring-1 ring-white font-bold';
+    } else {
+      cell.className += 'bg-slate-600 text-slate-400';
+    }
+    cell.textContent = card.letter;
+    c.appendChild(cell);
+  });
+}
+
+function buildRefTable() {
+  const c = document.getElementById('ref-table');
+  NATO.forEach(n => {
+    const cell = document.createElement('div');
+    cell.className = 'flex gap-1';
+    const lt = document.createElement('span');
+    lt.className = 'font-bold text-white w-4';
+    lt.textContent = n.letter;
+    const wt = document.createElement('span');
+    wt.className = 'text-slate-300';
+    wt.textContent = `${n.word} (${n.pron})`;
+    cell.appendChild(lt);
+    cell.appendChild(wt);
+    c.appendChild(cell);
+  });
+}
+
+function nReset() {
+  nStats = { correct: 0, wrong: 0, streak: 0, results: {}, mode: nMode };
+  nDeck = [...NATO];
+  nIdx = 0;
+  nSaveStats();
+  const card = document.getElementById('n-card');
+  // restore card structure if it was replaced
+  if (!document.getElementById('n-prompt')) {
+    card.innerHTML = `
+      <div id="n-prompt" class="text-7xl font-bold text-slate-800 mb-2"></div>
+      <div id="n-answer" class="text-3xl font-semibold text-blue-700 mt-4 hidden"></div>
+      <div id="n-phonetics-extra" class="text-sm text-slate-400 mt-2 hidden"></div>
+      <div id="n-hint-text" class="text-xs text-slate-400 mt-4">クリックして答えを表示</div>`;
+    card.onclick = nReveal;
+  }
+  document.getElementById('n-btn-wrong') && (document.getElementById('n-btn-wrong').disabled = false);
+  nShowCard();
+}
+
+function nShuffle() {
+  for (let i = nDeck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [nDeck[i], nDeck[j]] = [nDeck[j], nDeck[i]];
+  }
+  nIdx = 0;
+  nStats = { correct: 0, wrong: 0, streak: 0, results: {}, mode: nMode };
+  nSaveStats();
+  nShowCard();
+}
+
+nLoadStats();
+buildRefTable();
+nShowCard();
+</script>
+</body>
+</html>
